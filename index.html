@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>投放消耗结算系统 · ER 图</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #1a2744 100%);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid #2d3748;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.4);
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.02em;
+  }
+  header .badge {
+    background: #3182ce;
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+  }
+  .legend {
+    display: flex;
+    gap: 20px;
+    padding: 12px 32px;
+    background: #1a202c;
+    border-bottom: 1px solid #2d3748;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #a0aec0;
+  }
+  .legend-dot {
+    width: 10px; height: 10px; border-radius: 2px;
+  }
+  .dot-config  { background: #68d391; }
+  .dot-source  { background: #63b3ed; }
+  .dot-estimate{ background: #f6ad55; }
+  .dot-actual  { background: #fc8181; }
+  .dot-dim     { background: #b794f4; }
+  .diagram-container {
+    padding: 32px;
+    overflow-x: auto;
+  }
+  .mermaid {
+    background: #1a202c;
+    border-radius: 12px;
+    padding: 32px;
+    border: 1px solid #2d3748;
+    min-width: 900px;
+  }
+  .section-label {
+    font-size: 13px;
+    color: #718096;
+    text-align: center;
+    margin-bottom: 24px;
+    letter-spacing: 0.05em;
+  }
+  footer {
+    text-align: center;
+    padding: 20px;
+    color: #4a5568;
+    font-size: 12px;
+    border-top: 1px solid #2d3748;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🗄️ 投放消耗结算系统 · ER 图</h1>
+  </div>
+  <span class="badge">共 18 张表</span>
+</header>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot dot-config"></div>基础配置层</div>
+  <div class="legend-item"><div class="legend-dot dot-source"></div>数据源层</div>
+  <div class="legend-item"><div class="legend-dot dot-estimate"></div>暂估结算层</div>
+  <div class="legend-item"><div class="legend-dot dot-actual"></div>实际结算层</div>
+  <div class="legend-item"><div class="legend-dot dot-dim"></div>外部维度表</div>
+</div>
+
+<div class="diagram-container">
+  <div class="section-label">· 基础配置 → 数据源 → 暂估结算 → 实际结算 ·</div>
+  <div class="mermaid">
+erDiagram
+    %% ========== 基础配置层 ==========
+    adcost_media_info {
+        bigint  media_id       PK
+        string  media_name     "媒体名称"
+        string  media_short_name "媒体简称"
+        string  media_type     "媒体类型"
+    }
+    adcost_agency_info {
+        bigint  agency_id      PK
+        string  agency_name    "代理商全称"
+        string  agency_short_name "代理商简称"
+        bigint  supplier_id    FK
+        string  payment_period "账期"
+    }
+    adcost_rebate_config {
+        bigint  rebate_id      PK
+        bigint  media_id       FK
+        bigint  agency_id      FK
+        double  rebate_rate    "返点比例"
+        string  effective_date "生效日期"
+    }
+    adcost_rebate_detail {
+        bigint  detail_id      PK
+        bigint  rebate_id      FK
+        string  period         "期间YYYYMM"
+        double  rebate_amount  "返点金额"
+    }
+    adcost_project_info {
+        bigint  project_id     PK
+        string  project_name   "项目名称"
+        string  project_code   "项目编码"
+        string  company_id     FK
+    }
+    adcost_advertiser_info {
+        bigint  advertiser_id  PK
+        string  advertiser_name "广告主名称"
+        bigint  media_id       FK
+        bigint  agency_id      FK
+        string  account_id     "媒体账户ID"
+    }
+
+    %% ========== 数据源层 ==========
+    adcost_daily_stat {
+        bigint  stat_id        PK
+        date    log_date       "日期"
+        bigint  media_id       FK
+        bigint  project_id     FK
+        bigint  agency_id      FK
+        bigint  advertiser_id  FK
+        double  original_cost  "原始消耗"
+        double  reward_cost    "激励消耗"
+        double  rebate_amount  "返点金额"
+        double  net_cost       "净消耗"
+        string  currency       "币种"
+        double  exchange_rate  "汇率"
+    }
+    adcost_clean_error_log {
+        bigint  error_id       PK
+        date    log_date       "日期"
+        bigint  media_id       FK
+        string  error_type     "异常类型"
+        string  error_msg      "异常描述"
+        string  status         "处理状态"
+    }
+
+    %% ========== 暂估结算层 ==========
+    adcost_month_estimate_bill {
+        bigint  estimate_id    PK
+        string  period         "期间YYYYMM"
+        bigint  media_id       FK
+        bigint  project_id     FK
+        bigint  agency_id      FK
+        double  original_cost  "原始消耗汇总"
+        double  net_cost       "净消耗"
+        double  estimate_amount "暂估金额"
+        string  status         "状态"
+    }
+    adcost_estimate_split {
+        bigint  split_id       PK
+        bigint  estimate_id    FK
+        bigint  company_id     FK
+        double  split_amount   "拆分金额"
+        string  split_ratio    "拆分比例"
+        string  status         "状态"
+    }
+    adcost_estimate_split_detail {
+        bigint  detail_id      PK
+        bigint  split_id       FK
+        string  item_name      "明细项"
+        double  amount         "金额"
+    }
+    adcost_estimate_operation {
+        bigint  op_id          PK
+        bigint  estimate_split_id FK
+        string  op_type        "操作类型"
+        string  op_user        "操作人"
+        string  op_time        "操作时间"
+        string  push_status    "推送状态"
+    }
+
+    %% ========== 实际结算层 ==========
+    adcost_month_reconcile {
+        bigint  reconcile_id   PK
+        string  period         "期间YYYYMM"
+        bigint  media_id       FK
+        bigint  project_id     FK
+        bigint  agency_id      FK
+        double  our_net_cash   "我方月结现金"
+        double  agent_net_cash "代理月结现金"
+        double  diff           "差异"
+        string  reconcile_status "对账状态"
+    }
+    adcost_payment_split {
+        bigint  payment_split_id PK
+        bigint  reconcile_id   FK
+        bigint  company_id     FK
+        bigint  supplier_id    FK
+        double  payment_amount "付款金额"
+        string  status         "状态"
+    }
+    adcost_payment_operation {
+        bigint  op_id          PK
+        bigint  payment_split_id FK
+        string  bpm_no         "BPM单号"
+        string  bpm_status     "BPM状态"
+        string  op_user        "操作人"
+        string  op_time        "操作时间"
+    }
+    adcost_settlement_report {
+        bigint  report_id      PK
+        string  period         "期间YYYYMM"
+        bigint  project_id     FK
+        bigint  media_id       FK
+        bigint  company_id     FK
+        bigint  supplier_id    FK
+        double  settlement_amount "结算金额"
+        string  status         "状态"
+        string  bpm_no         "BPM单号"
+        string  invoice_no     "发票号"
+        string  input_tax_status "进项认证"
+        string  kingdee_entry_voucher "金蝶入账"
+        string  kingdee_payment_voucher "金蝶付款"
+    }
+
+    %% ========== 外部维度表 ==========
+    company_info {
+        bigint  company_id     PK
+        string  company_full_name "主体全称"
+        string  company_code   "主体编码"
+    }
+    supplier_info {
+        bigint  supplier_id    PK
+        string  supplier_name  "供应商名称"
+        string  supplier_code  "供应商编码"
+    }
+
+    %% ========== 关系 ==========
+    adcost_media_info   ||--o{ adcost_rebate_config       : "media_id"
+    adcost_agency_info  ||--o{ adcost_rebate_config       : "agency_id"
+    adcost_rebate_config ||--o{ adcost_rebate_detail      : "rebate_id"
+
+    adcost_media_info   ||--o{ adcost_advertiser_info     : "media_id"
+    adcost_agency_info  ||--o{ adcost_advertiser_info     : "agency_id"
+
+    adcost_media_info   ||--o{ adcost_daily_stat          : "media_id"
+    adcost_project_info ||--o{ adcost_daily_stat          : "project_id"
+    adcost_agency_info  ||--o{ adcost_daily_stat          : "agency_id"
+    adcost_advertiser_info ||--o{ adcost_daily_stat       : "advertiser_id"
+
+    adcost_media_info   ||--o{ adcost_clean_error_log     : "media_id"
+
+    adcost_media_info   ||--o{ adcost_month_estimate_bill : "media_id"
+    adcost_project_info ||--o{ adcost_month_estimate_bill : "project_id"
+    adcost_agency_info  ||--o{ adcost_month_estimate_bill : "agency_id"
+
+    adcost_month_estimate_bill ||--o{ adcost_estimate_split      : "estimate_id"
+    company_info               ||--o{ adcost_estimate_split      : "company_id"
+    adcost_estimate_split      ||--o{ adcost_estimate_split_detail : "split_id"
+    adcost_estimate_split      ||--o{ adcost_estimate_operation  : "estimate_split_id"
+
+    adcost_media_info   ||--o{ adcost_month_reconcile     : "media_id"
+    adcost_project_info ||--o{ adcost_month_reconcile     : "project_id"
+    adcost_agency_info  ||--o{ adcost_month_reconcile     : "agency_id"
+
+    adcost_month_reconcile ||--o{ adcost_payment_split    : "reconcile_id"
+    company_info           ||--o{ adcost_payment_split    : "company_id"
+    supplier_info          ||--o{ adcost_payment_split    : "supplier_id"
+    adcost_payment_split   ||--o{ adcost_payment_operation : "payment_split_id"
+
+    adcost_project_info ||--o{ adcost_settlement_report   : "project_id"
+    adcost_media_info   ||--o{ adcost_settlement_report   : "media_id"
+    company_info        ||--o{ adcost_settlement_report   : "company_id"
+    supplier_info       ||--o{ adcost_settlement_report   : "supplier_id"
+
+    supplier_info       ||--o{ adcost_agency_info         : "supplier_id"
+  </div>
+</div>
+
+<footer>投放消耗结算系统 · ER 图 · 共 18 张表 · 由 小D 生成</footer>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    er: {
+      diagramPadding: 20,
+      layoutDirection: 'TB',
+      minEntityWidth: 100,
+      minEntityHeight: 75,
+      entityPadding: 15,
+      fontSize: 12
+    }
+  });
+</script>
+</body>
+</html>
